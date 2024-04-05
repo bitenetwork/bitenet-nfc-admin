@@ -1,0 +1,6 @@
+{
+    "UNEXPECT": "系統繁忙，請稍後再試",
+    "UNAUTHORIZED": "未獲得授權，請先登錄",
+    "PARAMETER_ERROR": "請求參數錯誤",
+    "DATA_NOT_EXIST": "請求數據不存在"
+  }

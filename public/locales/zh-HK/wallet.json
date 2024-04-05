@@ -1,0 +1,11 @@
+{
+  "transferInMissBalance": "賬戶餘額異常", 
+  "transferOutBalanceNotEnough": "賬戶餘額不足",
+  "SendNotificationCost": "消費：發送通知",
+  "RefundSendNotificationCost": "退款：發送通知失敗",
+  "GetBounsBySignInInAPP": "APP登錄獎勵",
+  "GetBounsBySignIn": "餐館打卡獎勵",
+  "GetBounsByDoInvite": "邀請好友獎勵",
+  "GetBounsByBeInvited": "被邀請好友獎勵",
+  "LuckyDrawCost": "抽獎消耗"
+}

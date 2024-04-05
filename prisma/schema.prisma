@@ -1,0 +1,1641 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider      = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+generator zod {
+    provider                     = "zod-prisma-types" // 这个provider是修改源码后重新打包，见./vendor/zod-prisma-types/README.md
+    writeDocumentationAsDescribe = true // 自动将/// 开头的注释以.describe()方式添加到生成的ZodSchema中
+    createInputTypes             = false
+}
+
+datasource db {
+    provider     = "mysql"
+    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
+    // Further reading:
+    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+    url          = env("DATABASE_URL")
+    relationMode = "prisma"
+}
+
+/// 系统管理员用户
+model SysUser {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 管理员
+    name     String  @db.VarChar(32)
+    /// 用户账户
+    username String  @unique @db.VarChar(64)
+    /// 密码
+    password String  @db.VarChar(255)
+    /// 手机号码
+    phone    String? @unique @db.VarChar(32)
+    /// 电子邮箱
+    mail     String? @unique @db.VarChar(255)
+    /// 备注信息
+    remark   String? @db.VarChar(255)
+    /// 停用/启用标识；false 停用；true 启用
+    enabled  Boolean @default(true)
+
+    @@map("sys_user")
+}
+
+/// 会员用户
+model Member {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 账号
+    account        String    @db.VarChar(64)
+    /// 手机号区域代码
+    phoneAreaCode  String?   @db.VarChar(4)
+    /// 手机号
+    phone          String?   @db.VarChar(32)
+    /// 昵称
+    nickname       String?   @db.VarChar(128)
+    /// 头像URL地址
+    avatar         String?   @db.VarChar(255)
+    /// 性别枚举：MALE 男性；FEMALE 女性；UNKNOWN 未知；
+    gender         String?   @db.VarChar(16)
+    /// 会员身份：GENERAL 普通会员；AGENT 代理人
+    identity       String    @default("GENERAL") @db.VarChar(16)
+    /// 登录密码 @zod.custom.omit(["model"])
+    password       String?   @db.VarChar(255)
+    /// 最后一次访问时间
+    lastAccessTime DateTime?
+    /// 可扩展业务状态标志位
+    memberFlag     Int       @default(0) @db.UnsignedInt
+    /// 账户是否冻结：0 否； 1是；
+    freeze         Boolean   @default(false) @db.TinyInt
+    /// 账号冻结原因
+    freezeReason   String?   @db.VarChar(1024)
+    /// 用户最后一次访问所在的时区，东时区是正数，西时区是负数，例如东八区：timezone=8，西五区：timezone=-5
+    timezone       Int?
+    /// 是否虚拟用户：0 否；1 是；
+    virtualUser    Boolean   @default(false) @db.TinyInt
+    /// 是否app登录过：0 否；1 是；
+    appSignIn      Boolean   @default(false)
+    /// 是否可以用固定验证码登录
+    freepass       Boolean   @default(false)
+
+    @@unique([account, deleteAt])
+    @@unique([phoneAreaCode, phone, deleteAt])
+    @@map("member")
+}
+
+model MemberLevel {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌id
+    brandId  Int @db.UnsignedInt
+    /// 会员id
+    memberId Int @db.UnsignedInt
+
+    /// 会员等级
+    levelCode     String    @default("LV_GENERAL")
+    /// 会员等级过期时间
+    levelExpire   DateTime?
+    /// 会员等级过期后展示的等级
+    backLevelCode String    @default("LV_GENERAL")
+
+    @@unique([brandId, memberId, deleteAt])
+    @@map("member_level")
+}
+
+/// 第三方授权记录
+model MemberAuth {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 会员主键
+    memberId Int
+    /// 第三方应用类型
+    appType  String
+    /// 第三方应用appid
+    appId    String
+    /// 第三方应用用户id
+    userId   String
+
+    @@unique([appType, appId, userId])
+    @@map("member_auth")
+}
+
+/// 邀请码记录
+model InviteCode {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 操作人类型枚举
+    operatorType OperatorType
+    /// 操作人id
+    operatorId   Int
+    /// 品牌id
+    brandId      Int
+    /// 餐馆id
+    restaurantId Int
+    /// 邀请码
+    code         String       @unique
+    /// 二维码base64
+    base64       String       @db.LongText
+    /// 邀请码失效时间
+    expireAt     DateTime?
+    /// 是否启用：true 是，false 否
+    enabled      Boolean      @default(true)
+    /// 被邀请人数
+    invitees     Int          @default(0)
+    /// 已发放邀请奖励
+    inviteBonus  Int          @default(0)
+    /// 备注
+    remark       String?
+    /// 推荐人姓名
+    staffName    String?
+
+    @@map("invite_code")
+}
+
+/// 记录邀请人和被邀请人之间的关系
+model InviteMember {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 邀请码id
+    inviteCodeId    Int    @db.UnsignedInt
+    /// 邀请码
+    code            String
+    /// 邀请人用户id
+    inviterMemberId Int    @db.UnsignedInt
+    /// 被邀请人用户id
+    inviteeMemberId Int    @db.UnsignedInt
+    /// 邀请人奖励代币数量 @zod.number
+    inviterBonus    Int    @db.UnsignedInt
+    /// 被邀请人奖励代币数量 @zod.number
+    inviteeBonus    Int    @db.UnsignedInt
+
+    @@unique([inviterMemberId, inviteeMemberId])
+    @@map("invite_member")
+}
+
+model InviteGift {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 邀请码id
+    inviteCodeId Int @db.UnsignedInt
+    /// 礼物id
+    giftId       Int @db.UnsignedInt
+    /// 礼物数量
+    giftAmount   Int @db.UnsignedInt
+
+    @@unique([inviteCodeId, deleteAt])
+}
+
+enum OperatorType {
+    ADMIN
+    RESTAUARNT
+    CUSTOMER
+}
+
+/// 餐馆会员关系
+model RestaurantMemberRelation {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌id
+    brandId      Int
+    /// 餐馆id
+    restaurantId Int
+    /// 会员id
+    memberId     Int
+    /// 探访次数
+    accessTimes  Int       @default(0)
+    /// 探访日期
+    accessDate   DateTime?
+    /// 标签
+    tags         String?   @db.Text
+    /// 邀请码
+    inviteCode   String?
+    /// 推荐人姓名
+    staffName    String?
+
+    @@unique([restaurantId, memberId, deleteAt])
+    @@map("restaurant_member_relation")
+}
+
+/// 餐馆会员标签
+model RestaurantMemberTag {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌id
+    brandId      Int
+    /// 餐馆id
+    restaurantId Int
+    /// 会员id
+    memberId     Int
+    /// 标签
+    tag          String
+
+    @@unique([restaurantId, memberId, tag])
+    @@map("restaurant_member_tag")
+}
+
+/// 手机号区号
+model PhoneAreaCode {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    englishName String @db.VarChar(128)
+    chineseName String @db.VarChar(128)
+    countryCode String @db.VarChar(32)
+    phoneCode   String @db.VarChar(32)
+    emoji       String @db.VarChar(32)
+    mix         String @db.VarChar(255)
+
+    @@map("phone_area_code")
+}
+
+/// 文件上传记录
+model ResourceFile {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// s3存储名字
+    uuid          String @db.VarChar(64)
+    /// 文件名
+    fileName      String @db.VarChar(128)
+    /// 文件扩展名
+    fileExtension String @default("") @db.VarChar(64)
+    /// 文件大小，字节数
+    fileSize      Int    @default(0) @db.UnsignedInt
+    /// 文件的http协议Content-Type
+    contentType   String @default("") @db.VarChar(64)
+
+    @@map("resource_file")
+}
+
+/// AWS APP推送设备标识
+model AwsSnsEndpoint {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 用户id
+    memberId       Int     @db.UnsignedInt
+    /// 在AWS SNS 创建平台应用代号：SNAPX_APP_IOS iOS应用端；SNAPX_APP_ANDROID 安卓应用端
+    platform       String  @db.VarChar(64)
+    /// 在AWS SNS 创建平台应用id
+    platformAppArn String  @db.VarChar(255)
+    /// 移动推送服务渠道枚举 ADM：Amazon Device Messaging；APNS：iOS推送渠道 BAIDU：百度云推送；FCM：Firebase Cloud Messaging；MPNS：适用于 Windows Phone 的 Microsoft 推送通知服务；WNS：Windows 推送通知服务；
+    pushChannel    String  @db.VarChar(64)
+    /// 移动设备token或设备id，和由移动推送服务渠道提供
+    deviceToken    String  @db.VarChar(255)
+    /// AWS SNS 服务设备标识，代表一个设备上的一个应用
+    endpointArn    String? @db.VarChar(128)
+
+    @@unique([platformAppArn, pushChannel, deviceToken])
+    @@map("aws_sns_endpoint")
+}
+
+/// 站内信
+model InSiteMessage {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 站内信来源枚举：SYSTEM 系统自动触发；ADMIN 管理后台发送；RESTAURANT 餐厅
+    source           String  @db.VarChar(64)
+    /// 餐厅 id
+    restaurantId     Int     @default(0) @db.UnsignedInt
+    /// 餐厅操作用户 id
+    restaurantUserId Int     @default(0) @db.UnsignedInt
+    /// 站内信主题枚举：GENERAL 普通通知
+    subject          String  @db.VarChar(64)
+    /// 标题
+    title            String  @db.VarChar(255)
+    /// 正文
+    context          String  @db.Text
+    /// 关联的id
+    relateId         Int     @default(0) @db.UnsignedInt
+    /// 关联的JSON对象
+    payload          String? @db.Text
+    /// 接收人会员id
+    toMemberId       Int     @db.UnsignedInt
+    /// 状态值：0 未读；1已读
+    status           Int     @default(0) @db.TinyInt
+
+    @@map("in_site_message")
+}
+
+/// 推送
+model Notification {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 操作人类型枚举
+    operatorType OperatorType
+    /// 操作人id
+    operatorId   Int          @db.UnsignedInt
+    /// 品牌id
+    brandId      Int?         @db.UnsignedInt
+    /// 餐馆id
+    restaurantId Int?         @db.UnsignedInt
+
+    /// 标题
+    title   String  @db.VarChar(255)
+    /// 正文
+    context String  @db.Text
+    /// 备注信息
+    remark  String?
+
+    /// 站内信
+    inSiteMessage Boolean @default(false)
+    /// APP推送
+    appPush       Boolean @default(false)
+    /// SMS推送
+    smsPush       Boolean @default(false)
+
+    /// 推送状态
+    status        NotificationStatus
+    /// 接收方数量
+    receiverCount Int                @default(0)
+
+    /// APP推送的TPOIC @zod.custom.omit([model, input])
+    appPushTopicArn String?
+    /// SMS推送的TOPIC @zod.custom.omit([model, input])
+    smsPushTopicArn String?
+
+    /// 接收方类枚举：CUSTOMER：顾客；POTENTIAL 潜在顾客
+    receiverType ReceiverType @default(CUSTOMER)
+
+    @@map("notification")
+}
+
+/// 推送接收方
+model NotificationReceiver {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 所属通知主键
+    notificationId Int  @db.UnsignedInt
+    /// 品牌id
+    brandId        Int? @db.UnsignedInt
+    /// 餐馆id
+    restaurantId   Int? @db.UnsignedInt
+    /// 会员id
+    memberId       Int? @db.UnsignedInt
+
+    /// APP推送的subscriptionArn @zod.custom.omit([model, input])
+    appPushSubArn String?
+    /// SMS推送的subscriptionArn @zod.custom.omit([model, input])
+    smsPushSubArn String?
+
+    @@map("notification_receiver")
+}
+
+/// 推送账单
+model NotificationBill {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 所属通知主键
+    notificationId Int  @db.UnsignedInt
+    /// 餐馆id
+    brandId        Int? @db.UnsignedInt
+    /// 餐馆id
+    restaurantId   Int? @db.UnsignedInt
+
+    /// 总价
+    totalPrice            Int
+    /// 账单明细
+    notificationBillItems NotificationBillItem[]
+
+    @@unique([notificationId, deleteAt])
+    @@map("notification_bill")
+}
+
+/// 推送账单明细
+model NotificationBillItem {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 所属通知主键
+    notificationId Int  @db.UnsignedInt
+    /// 餐馆id
+    brandId        Int? @db.UnsignedInt
+    /// 餐馆id
+    restaurantId   Int? @db.UnsignedInt
+
+    /// 账单类型：IN_SITE_MESSAGE 站内信；APP_PUSH APP推送；SMS_PUSH 短信推送；
+    type               NotificationBillType
+    /// 单价
+    unitPrice          Int                  @db.UnsignedInt
+    /// 数量
+    quantity           Int
+    /// 总价
+    totalPrice         Int
+    /// 账单
+    notificationBill   NotificationBill     @relation(fields: [notificationBillId], references: [id])
+    /// 推送账单id
+    notificationBillId Int
+
+    @@map("notification_bill_item")
+}
+
+model SmsPushRecord {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 所属通知主键
+    notificationId         Int  @db.UnsignedInt
+    /// 餐馆id
+    brandId                Int? @db.UnsignedInt
+    /// 餐馆id
+    restaurantId           Int? @db.UnsignedInt
+    /// 通知接收人id
+    notificationReceiverId Int? @db.UnsignedInt
+    /// 会员id
+    memberId               Int? @db.UnsignedInt
+
+    /// 正文
+    context       String   @db.Text
+    /// 手机号区域代码
+    phoneAreaCode String?  @db.VarChar(4)
+    /// 手机号
+    phone         String?  @db.VarChar(32)
+    /// 推送时间
+    pushTime      DateTime
+
+    @@map("sms_push_record")
+}
+
+enum NotificationStatus {
+    DRAFT
+    PROCESS
+    READY
+    DONE
+    FAIL
+}
+
+enum NotificationBillType {
+    IN_SITE_MESSAGE
+    APP_PUSH
+    SMS_PUSH
+}
+
+enum ReceiverType {
+    CUSTOMER
+    POTENTIAL
+}
+
+/// 钱包账户
+model WalletAccount {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 账户类型
+    walletType WalletAccountType
+    /// 账户拥有人类型
+    ownerType  WalletAccountOwner
+    /// 账户用有人id
+    ownerId    Int                @db.UnsignedInt
+    /// 取整比例
+    rounding   Int
+
+    @@unique([walletType, ownerType, ownerId])
+    @@map("wallet_account")
+}
+
+/// 钱包余额
+model WalletBalance {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 所属钱包 id
+    walletAccountId Int                @db.UnsignedInt
+    /// 账户类型
+    walletType      WalletAccountType
+    /// 账户拥有人类型
+    ownerType       WalletAccountOwner
+    /// 账户用有人idnumber
+    ownerId         Int                @db.UnsignedInt
+    /// 取整比例
+    rounding        Int
+
+    /// 余额类型
+    balanceType WalletBalanceType
+    /// 账户余额 @zod.number
+    balance     Int               @db.UnsignedInt
+    /// 累计资产（借记）@zod.number
+    totalDebit  Int               @db.UnsignedInt
+    /// 累计负债（贷记）@zod.number
+    totalCredit Int               @db.UnsignedInt
+
+    @@unique([walletAccountId, balanceType])
+    @@map("wallet_balance")
+}
+
+/// 钱包交易流水
+model WalletTransation {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 所属钱包 id
+    walletAccountId Int                @db.UnsignedInt
+    /// 账户类型
+    walletType      WalletAccountType
+    /// 账户拥有人类型
+    ownerType       WalletAccountOwner
+    /// 账户用有人id
+    ownerId         Int                @db.UnsignedInt
+    /// 取整比例
+    rounding        Int
+
+    /// 钱包余额id
+    walletBalanceId Int               @db.UnsignedInt
+    /// 余额类型
+    balanceType     WalletBalanceType
+
+    /// 记账科目代码
+    subject             String                    @db.VarChar(255)
+    /// 记账方向：借记（正）debit；贷记（负）credit；
+    transationDirection WalletTransationDirection
+    /// 记账金额 @zod.number
+    amount              Int                       @db.UnsignedInt
+    /// 入账前余额 @zod.number
+    balanceBefore       Int                       @db.UnsignedInt
+    /// 入账后余额 @zod.number
+    balanceAfter        Int                       @db.UnsignedInt
+    /// 交易备注
+    remark              String                    @db.VarChar(2048)
+    /// 交易备注（英文）
+    remarkEn            String?                   @db.VarChar(2048)
+    /// 交易备注是否多语言
+    remarkI18n          Boolean?                  @default(false)
+
+    /// 凭证类型
+    voucherType String @db.VarChar(128)
+    /// 交易凭证
+    voucher     String @db.VarChar(255)
+
+    @@unique([walletAccountId, transationDirection, voucherType, voucher])
+    @@map("wallet_transation")
+}
+
+/// 充值记录
+model RechargeRecord {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 充值记录类型：RECHARGE 充值；DEDUCT 扣款
+    recordType   RechargeRecordType
+    /// 操作人类型枚举
+    operatorType OperatorType
+    /// 操作人id
+    operatorId   Int                @db.UnsignedInt
+    /// 品牌id
+    brandId      Int                @db.UnsignedInt
+    /// 充值金额 @zod.number
+    amount       Int                @db.UnsignedInt
+    /// 充值金额取整比例
+    rounding     Int
+    /// 备注
+    remark       String
+    /// 交易备注（英文）
+    remarkEn     String?
+    /// 是否已确认
+    comfirmed    Boolean
+
+    @@map("recharge_record")
+}
+
+model MemberRechargeRecord {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 充值记录类型：RECHARGE 充值；DEDUCT 扣款
+    recordType   RechargeRecordType
+    /// 操作人类型枚举
+    operatorType OperatorType
+    /// 操作人id
+    operatorId   Int                @db.UnsignedInt
+    /// 会员id
+    memberId     Int                @db.UnsignedInt
+    /// 充值金额 @zod.number
+    amount       Int                @db.UnsignedInt
+    /// 充值金额取整比例
+    rounding     Int
+    /// 备注
+    remark       String
+    /// 备注（英文）
+    remarkEn     String?
+    /// 是否已确认
+    comfirmed    Boolean
+
+    @@map("member_recharge_record")
+}
+
+/// 全局配置
+model GlobalConfig {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 代币命名
+    pointsName String
+
+    /// 赠送代币值区间 - 下限 @zod.number
+    bonusPointsRangeStart Int @db.UnsignedInt
+    /// 赠送代币值区间 - 上限 @zod.number
+    bonusPointsRangeEnd   Int @db.UnsignedInt
+    /// App登录奖励 @zod.number
+    appSignInBonus        Int @default(100000) @db.UnsignedInt
+
+    /// 推送收费 - 短信费用 @zod.number
+    pushFeeSms       Int     @db.UnsignedInt
+    /// 推送收费 - APP推送 @zod.number
+    pushFeeApp       Int     @db.UnsignedInt
+    /// 抽奖消费代币数量 @zod.number
+    luckyDrawCost    Int     @default(0) @db.UnsignedInt
+    /// 签到时间间隔，单位分钟
+    signInterval     Int     @default(0)
+    /// SMS短信范例
+    smsExample       String?
+    /// 餐厅NFT背景图范例
+    nftBackgourndUrl String?
+    /// 用户邀请奖励
+    inviteBonus      Int     @default(50000) @db.UnsignedInt
+
+    /// 用户打卡时餐厅抽成奖励 @zod.number
+    resturantSignInCommission Int @default(80) @db.UnsignedInt
+
+    @@map("global_config")
+}
+
+/// 餐厅NFC会员打卡记录
+model NfcSignInRecord {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 餐厅NFC code
+    restaurantNfcCode String
+    /// 品牌id
+    brandId           Int    @db.UnsignedInt
+    /// 餐厅id
+    restaurantId      Int    @db.UnsignedInt
+    /// 餐厅所在区
+    regionCode        String @db.VarChar(50)
+    /// 打卡活动Id
+    clockInId         Int?   @db.UnsignedInt
+    /// 会员id
+    memberId          Int    @db.UnsignedInt
+
+    /// 打卡奖励代币数量 @zod.number
+    bonus            Int      @db.UnsignedInt
+    /// 打卡时间
+    signInTime       DateTime
+    /// 打卡时的等级
+    currentLevelCode String
+    /// 奖励倍数
+    bonusMultiple    Int      @db.UnsignedInt
+    /// 翻倍前的奖励代币数量 @zod.number
+    originBouns      Int      @db.UnsignedInt
+
+    @@map("nfc_sign_in_record")
+}
+
+/// 餐厅NFC会员打卡周期
+model NfcSignInPeriod {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌id
+    brandId      Int @db.UnsignedInt
+    /// 餐厅id
+    restaurantId Int @db.UnsignedInt
+    /// 会员id
+    memberId     Int @db.UnsignedInt
+
+    /// 周期类型 RATENTION_LEVEL 保留等级周期；UP_LEVEL 提升等级周期；CLOCK_IN 打卡礼物周期
+    periodType     NfcSignInPeriodType
+    /// 关联外部活动Id
+    relateId       Int                   @default(0) @db.UnsignedInt
+    /// 打卡周期开始时间
+    periodStartAt  DateTime
+    /// 打卡周期结束时间
+    periodEndAt    DateTime
+    /// 打卡周期失效时间
+    periodExpireAt DateTime
+    /// 打卡周期状态 RUNNING 进行中；FINISH 完成；EXPIRE过期
+    periodStatus   NfcSignInPeriodStatus
+    /// 周期内打卡次数
+    signInTimes    Int                   @db.UnsignedInt
+
+    @@map("nfc_sign_in_period")
+}
+
+model NfcSignInPeriodRelation {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 周期类型 RATENTION_LEVEL 保留等级周期；UP_LEVEL 提升等级周期；CLOCK_IN 打卡礼物周期
+    periodType        NfcSignInPeriodType
+    /// 关联外部活动Id
+    relateId          Int                 @default(0) @db.UnsignedInt
+    /// 会员打卡周期id
+    nfcSignInPeriodId Int                 @db.UnsignedInt
+    /// 会员打卡记录id
+    nfcSignInRecordId Int                 @db.UnsignedInt
+
+    @@unique([periodType, relateId, nfcSignInPeriodId, nfcSignInRecordId])
+    @@map("nfc_sign_in_period_relation")
+}
+
+model MemberLevelDefinition {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 等级名称
+    name           String
+    /// 等级名称 英文
+    en_name        String
+    /// 等级代码
+    levelCode      String  @unique
+    /// 奖金翻倍数
+    bonusMultiple  Int     @db.UnsignedInt
+    /// 保留等级：n天内关顾x次的n
+    keepLevelDays  Int     @db.UnsignedInt
+    /// 保留等级：n天内关顾x次的x
+    keepLevelTimes Int     @db.UnsignedInt
+    /// 获取等级：n天内关顾x次的n
+    toLevelDays    Int     @db.UnsignedInt
+    /// 获取等级：n天内关顾x次的x
+    toLevelTimes   Int     @db.UnsignedInt
+    /// 下一等级code
+    nextLevelCode  String?
+    /// 保级失败回退等级code
+    backLevelCode  String  @default("GENERAL")
+
+    @@map("member_level_definition")
+}
+
+enum NfcSignInPeriodType {
+    RATENTION_LEVEL
+    UP_LEVEL
+    CLOCK_IN
+}
+
+enum NfcSignInPeriodStatus {
+    RUNNING
+    FINISH
+    EXPIRE
+}
+
+enum RechargeRecordType {
+    RECHARGE
+    DEDUCT
+}
+
+enum WalletAccountType {
+    MEMBER_POINTS
+    RESTAUARNT_PRE_RECHARGE
+}
+
+enum WalletBalanceType {
+    CONSUMABLE
+}
+
+enum WalletAccountOwner {
+    MEMBER
+    RESTAUARNT
+}
+
+enum WalletTransationDirection {
+    DEBIT
+    CREDIT
+}
+
+// ---------------------------------------------------------------------------------------------------------
+
+model Brand {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌名称
+    name           String         @db.VarChar(100)
+    /// 品牌英文名称
+    en_name        String         @db.VarChar(100)
+    /// 品牌等级类型
+    levelType      BrandLevelType
+    /// 品牌联系人
+    contacts       String?        @db.VarChar(50)
+    /// 品牌联系方式
+    contactsWay    String?        @db.VarChar(50)
+    /// 品牌logo
+    logo           String?        @db.VarChar(500)
+    /// 品牌描述
+    description    String?        @db.VarChar(500)
+    /// 品牌英文描述
+    en_description String?        @db.VarChar(500)
+    /// 到期时间
+    expiredDate    DateTime?
+    /// 排序
+    sort           Int?           @db.UnsignedInt
+
+    @@map("brand")
+}
+
+enum BrandLevelType {
+    BASIC
+    PREMIUM
+    EXPIRED
+}
+
+model Restaurant {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 餐厅名称
+    name           String  @db.VarChar(255)
+    /// 餐厅英文名称
+    en_name        String  @db.VarChar(255)
+    /// 餐厅品牌Id
+    brandId        Int     @default(0) @db.UnsignedInt
+    /// 餐厅顺序编号
+    indexCode      String  @unique @db.VarChar(10)
+    /// 餐厅nfc唯一标识
+    code           String  @unique @db.VarChar(32)
+    /// 餐厅地址
+    address        String  @db.VarChar(500)
+    /// 餐厅英文地址
+    en_address     String  @db.VarChar(500)
+    /// 餐厅所在区
+    regionCode     String  @db.VarChar(50)
+    /// 联系人
+    contacts       String  @db.VarChar(50)
+    /// 联系方式
+    contactsWay    String  @db.VarChar(32)
+    /// 餐厅封面
+    cover          String  @db.VarChar(500)
+    /// 经度
+    lng            String  @db.VarChar(100)
+    /// 纬度
+    lat            String  @db.VarChar(100)
+    /// 餐厅描述
+    description    String? @db.VarChar(500)
+    /// 餐厅英文描述
+    en_description String? @db.VarChar(500)
+    /// 是否主店
+    isMainStore    Boolean @default(false) @db.TinyInt
+    /// 最低消费
+    minimumCharge  Int?    @default(0) @db.UnsignedInt
+    /// 菜品id
+    cuisineTypeId  Int     @default(0) @db.UnsignedInt
+
+    @@index([brandId], name: "idx_brand_id")
+    @@map("restaurant")
+}
+
+model RestaurantRegion {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 地区编码
+    code    String @unique @db.VarChar(50)
+    /// 地区名称
+    name    String @db.VarChar(100)
+    /// 地区英文名称
+    en_name String @db.VarChar(100)
+
+    @@map("restaurant_region")
+}
+
+model RestaurantUser {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌Id
+    brandId        Int     @default(0) @db.UnsignedInt
+    /// 餐厅Id
+    restaurantId   Int     @default(0) @db.UnsignedInt
+    /// 姓名
+    userName       String  @db.VarChar(100)
+    /// 手机号区域代码
+    phoneAreaCode  String  @db.VarChar(4)
+    /// 手机号
+    phone          String  @db.VarChar(32)
+    /// 账号
+    account        String  @db.VarChar(64)
+    /// 登录密码
+    password       String  @db.VarChar(255)
+    /// 昵称
+    nickname       String? @db.VarChar(100)
+    /// 性别枚举：MALE 男性；FEMALE 女性；UNKNOWN 未知；
+    gender         String? @db.VarChar(10)
+    /// 头像URL地址
+    avatar         String? @db.VarChar(500)
+    /// 所属角色，1，2，3
+    roles          String? @db.VarChar(255)
+    /// 是否品牌主账号
+    isBrandMain    Boolean @default(false) @db.TinyInt
+    /// 账户是否可用：0 否； 1是；
+    isEnabled      Boolean @default(false) @db.TinyInt
+    /// 账号不可用原因
+    disabledReason String? @db.VarChar(500)
+
+    @@unique([phoneAreaCode, phone, deleteAt])
+    @@unique([account, deleteAt])
+    @@index([brandId], name: "idx_brand_id")
+    @@index([restaurantId], name: "idx_restaurant_id")
+    @@map("restaurant_user")
+}
+
+model RestaurantNFC {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 餐厅Id
+    restaurantId   Int     @default(0) @db.UnsignedInt
+    /// nfc图片地址
+    photo          String  @db.VarChar(500)
+    /// nfc描述
+    description    String? @db.VarChar(500)
+    /// nfc描述
+    en_description String? @db.VarChar(500)
+    /// 地址
+    address        String? @db.VarChar(500)
+
+    @@index([restaurantId], name: "idx_restaurant_id")
+    @@map("restaurant_nfc")
+}
+
+model Gift {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌Id
+    brandId        Int       @default(0) @db.UnsignedInt
+    /// 礼物名称
+    name           String    @db.VarChar(100)
+    /// 礼物英文名称
+    en_name        String    @db.VarChar(100)
+    /// 礼物类型
+    type           GiftType?
+    /// 礼物价格
+    price          String?   @db.VarChar(50)
+    /// 礼物图片
+    photo          String?   @db.VarChar(500)
+    /// 礼物描述
+    description    String?   @db.VarChar(500)
+    /// 礼物英文描述
+    en_description String?   @db.VarChar(500)
+    /// 礼物是否能兑换
+    isExchange     Boolean   @default(false) @db.TinyInt
+    /// 兑换礼物需要的花费
+    exchangeCost   Decimal?  @db.Decimal(10, 2)
+
+    @@index([brandId], name: "idx_brand_id")
+    @@map("gift")
+}
+
+enum GiftType {
+    LUCKY_DRAW
+    SIGN_IN
+}
+
+model MemberGiftExchange {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌Id
+    brandId                    Int                    @default(0) @db.UnsignedInt
+    /// 餐厅Id
+    restaurantId               Int                    @default(0) @db.UnsignedInt
+    /// 会员Id
+    memberId                   Int                    @default(0) @db.UnsignedInt
+    /// 兑换礼物需要的花费
+    exchangeCost               Decimal                @default(0) @db.Decimal(10, 2)
+    /// 冗余兑换礼物Id 
+    exchangeGiftId             Int                    @default(0) @db.UnsignedInt
+    /// 冗余兑换礼物名称
+    exchangeGiftName           String                 @db.VarChar(100)
+    /// 冗余兑换礼物英文名称
+    exchangeGiftEn_name        String                 @db.VarChar(100)
+    /// 冗余兑换礼物图片     
+    exchangeGiftPrice          String?                @db.VarChar(16)
+    /// 冗余兑换礼物价格    
+    exchangeGiftPhoto          String?                @db.VarChar(500)
+    /// 冗余兑换礼物描述
+    exchangeGiftDescription    String?                @db.VarChar(500)
+    /// 冗余兑换礼物英文描述
+    exchangeGiftEn_description String?                @db.VarChar(500)
+    /// 签到赠送时，记录关联的打卡id
+    signInRecordId             Int?                   @db.UnsignedInt
+    /// 抽奖获取时，记录关联的打卡id
+    luckyDrawRecordId          Int?                   @db.UnsignedInt
+    /// 礼物类型
+    type                       GiftType?
+    /// 兑换记录类型
+    exchangeType               MemberGiftExchangeType @default(GENERAL)
+    /// 单次获得数量  
+    quantity                   Int                    @default(1) @db.UnsignedInt
+    /// 是否已经核销
+    isSettlement               Boolean                @default(false) @db.TinyInt
+
+    @@index([brandId], name: "idx_brand_id")
+    @@index([memberId], name: "idx_memberId_id")
+    @@map("member_gift_exchange")
+}
+
+enum MemberGiftExchangeType {
+    LUCKY_DRAW
+    RESTAUARNT_INVITE
+    SIGN_IN_BOUNS
+    GENERAL
+}
+
+model ClockIn {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌Id
+    brandId         Int       @default(0) @db.UnsignedInt
+    /// 打卡活动名称
+    name            String    @db.VarChar(100)
+    /// 打卡活动英文名称
+    en_name         String    @db.VarChar(100)
+    /// 开始时间
+    startDate       DateTime?
+    /// 结束时间
+    endDate         DateTime?
+    /// 单次周期长度
+    cycleDaysLength Int       @default(0) @db.UnsignedInt
+    /// 是否循环周期
+    isLoop          Boolean   @default(false) @db.TinyInt
+    //  打卡活动描述
+    description     String?   @db.VarChar(500)
+    //  打卡活动英文描述
+    en_description  String?   @db.VarChar(500)
+    /// 是否可用：0 否； 1是；
+    isEnabled       Boolean   @default(false) @db.TinyInt
+
+    @@index([brandId], name: "idx_brand_id")
+    @@map("clock_in")
+}
+
+model ClockInRule {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 打卡活动Id
+    clockInId      Int     @default(0) @db.UnsignedInt
+    /// 周期内中奖的日期，1 表示第一天
+    cycleDayNumber Int     @default(0) @db.UnsignedInt
+    /// 描述标题
+    title          String? @db.VarChar(100)
+    /// 描述英文标题 
+    en_title       String? @db.VarChar(100)
+    /// 礼物Id
+    giftId         Int     @default(0) @db.UnsignedInt
+    /// 单次获得数量  
+    quantity       Int     @default(0) @db.UnsignedInt
+
+    @@index([clockInId], name: "idx_clock_in_id")
+    @@map("clock_in_rule")
+}
+
+model LuckyDraw {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌Id
+    brandId        Int       @default(0) @db.UnsignedInt
+    /// 餐厅Id
+    restaurantId   Int       @default(0) @db.UnsignedInt
+    /// 抽奖活动名称
+    name           String    @db.VarChar(100)
+    /// 抽奖活动英文名称
+    en_name        String    @db.VarChar(100)
+    /// 开始时间
+    startDate      DateTime?
+    /// 结束时间
+    endDate        DateTime?
+    //  抽奖活动描述
+    description    String?   @db.VarChar(500)
+    //  抽奖活动英文描述
+    en_description String?   @db.VarChar(500)
+    /// 是否可用：0 否； 1是；
+    isEnabled      Boolean   @default(false) @db.TinyInt
+
+    @@map("lucky_draw")
+}
+
+model LuckyDrawRule {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 抽奖活动Id
+    luckyDrawId     Int     @default(0) @db.UnsignedInt
+    /// 等级, 0代表未中奖 1标识一等奖
+    level           Int     @default(0) @db.UnsignedInt
+    /// 标题, 例如：一等奖 二等奖 三等奖 谢谢参与
+    title           String  @db.VarChar(50)
+    /// 英文标题, 例如：First Prize Second Prize Third Prize Thank you for participating
+    en_title        String  @db.VarChar(50)
+    /// 礼物Id
+    giftId          Int     @default(0) @db.UnsignedInt
+    /// 礼物总数量  
+    totalQuantity   Int     @default(0) @db.UnsignedInt
+    /// 单次获得数量  
+    quantity        Int     @default(0) @db.UnsignedInt
+    /// 剩余总数量  
+    residueQuantity Int     @default(0) @db.UnsignedInt
+    /// 概率
+    probability     Decimal @default(0) @db.Decimal(12, 6)
+
+    @@map("lucky_draw_rule")
+}
+
+model MemberLuckyDraw {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 品牌Id
+    brandId                     Int       @default(0) @db.UnsignedInt
+    /// 餐厅Id
+    restaurantId                Int       @default(0) @db.UnsignedInt
+    /// 会员Id
+    memberId                    Int       @default(0) @db.UnsignedInt
+    /// 抽奖活动Id
+    luckyDrawId                 Int       @default(0) @db.UnsignedInt
+    /// 抽奖活动名称
+    luckyDrawName               String    @db.VarChar(100)
+    /// 抽奖活动英文名称
+    luckyDrawEn_name            String    @db.VarChar(100)
+    /// 开始时间
+    luckyDrawStartDate          DateTime?
+    /// 结束时间
+    luckyDrawEndDate            DateTime?
+    //  抽奖活动描述
+    luckyDrawDescription        String?   @db.VarChar(500)
+    //  抽奖活动英文描述
+    luckyDrawEn_description     String?   @db.VarChar(500)
+    /// 触发抽奖活动规则Id
+    luckyDrawRuleId             Int       @default(0) @db.UnsignedInt
+    /// 冗余触发规则等级, 0代表未中奖，1代表一等奖，2代表二等奖，依次类推
+    luckyDrawRuleLevel          Int       @default(0) @db.UnsignedInt
+    /// 冗余触发规则标题, 例如：一等奖 二等奖 三等奖 谢谢参与 
+    luckyDrawRuleTitle          String    @db.VarChar(50)
+    /// 冗余触发规则英文标题, 例如：First Prize Second Prize Third Prize Thank you for participating
+    luckyDrawRuleEn_title       String    @db.VarChar(50)
+    /// 冗余触发规则礼物总数量
+    luckyDrawRuleTotalQuantity  Int       @default(0) @db.UnsignedInt
+    /// 冗余触发规则单次获得数量  
+    luckyDrawRuleQuantity       Int       @default(0) @db.UnsignedInt
+    /// 冗余触发规则概率
+    luckyDrawRuleProbability    Decimal   @default(0) @db.Decimal(12, 6)
+    /// 冗余触发规则礼物Id
+    luckyDrawGiftId             Int       @default(0) @db.UnsignedInt
+    /// 冗余触发规则礼物名称
+    luckyDrawGiftName           String?   @db.VarChar(100)
+    /// 冗余触发规则礼物英文名称
+    luckyDrawGiftEN_name        String?   @db.VarChar(100)
+    /// 冗余触发规则礼物图片     
+    luckyDrawGiftPrice          String?   @db.VarChar(16)
+    /// 冗余触发规则礼物价格    
+    luckyDrawGiftPhoto          String?   @db.VarChar(500)
+    /// 冗余触发规则礼物描述
+    luckyDrawGiftDescription    String?   @db.VarChar(500)
+    /// 冗余触发规则礼物英文描述
+    luckyDrawGiftEn_description String?   @db.VarChar(500)
+    /// 是否已经核销
+    isSettlement                Boolean   @default(false) @db.TinyInt
+
+    @@index([restaurantId], name: "idx_restaurant_id")
+    @@index([memberId], name: "idx_memberId_id")
+    @@map("member_lucky_draw")
+}
+
+model CuisineType {
+    /// 主键
+    id       Int      @id @default(autoincrement()) @db.UnsignedInt
+    /// 创建人 id
+    createBy Int      @default(0) @db.UnsignedInt
+    /// 修改人 id
+    updateBy Int      @default(0) @db.UnsignedInt
+    /// 创建时间
+    createAt DateTime @default(now())
+    /// 修改时间
+    updateAt DateTime @default(now()) @updatedAt
+    /// 删除时间
+    deleteAt Int      @default(0) @db.UnsignedInt
+
+    /// 菜品分类名称
+    cuisineTypeName   String
+    /// 菜品分类名称（英文）
+    cuisineTypeNameEn String
+
+    @@map("cuisine_type")
+}

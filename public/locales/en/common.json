@@ -1,0 +1,6 @@
+{
+    "UNEXPECT": "The system is busy, please try again later",
+    "UNAUTHORIZED": "Unauthorized，go sign in please",
+    "PARAMETER_ERROR": "Parameter error",
+    "DATA_NOT_EXIST": "Data not exist"
+  }

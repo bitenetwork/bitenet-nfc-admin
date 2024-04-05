@@ -1,0 +1,11 @@
+{
+  "transferInMissBalance": "Abnormal Account Balance", 
+  "transferOutBalanceNotEnough": "Insufficient Account Balance", 
+  "SendNotificationCost": "Send Notification Cost",
+  "RefundSendNotificationCost": "Refund Send Notification Cost",
+  "GetBounsBySignInInAPP": "Get Bouns By SignIn in APP",
+  "GetBounsBySignIn": "Get Bouns By SignIn",
+  "GetBounsByDoInvite": "Get Bouns By Do Invite",
+  "GetBounsByBeInvited": "Get Bouns By Be Invited",
+  "LuckyDrawCost": "Lucky Draw Cost"
+}

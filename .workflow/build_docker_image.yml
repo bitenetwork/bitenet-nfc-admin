@@ -1,0 +1,30 @@
+version: '1.0'
+name: build_docker_image
+displayName: build_docker_image
+triggers:
+  trigger: auto
+  push:
+    branches:
+      precise:
+        - dev
+stages:
+  - name: stage-c3242b96
+    displayName: 构建
+    strategy: naturally
+    trigger: auto
+    executor: []
+    steps:
+      - step: build@docker
+        name: build_docker
+        displayName: 镜像构建
+        type: cert
+        certificate: f907a970-90d2-013c-910c-7207783cbf14
+        tag: cgyrock/nfc:latest
+        dockerfile: ./Dockerfile
+        context: ''
+        artifacts: []
+        isCache: false
+        parameter: {}
+        notify: []
+        strategy:
+          retry: '0'

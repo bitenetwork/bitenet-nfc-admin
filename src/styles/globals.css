@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.demo-logo-vertical {
+
+  height: 32px;
+  margin: 18px;
+  background: rgba(255,255,255,.2);
+  border-radius: 6px;
+  color: white;
+  text-align: center;
+  line-height: 32px;
+  font-weight: bold;
+}

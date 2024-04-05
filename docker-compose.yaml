@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  nfc:
+    # 需要在部署服务器上docker-compose.yaml同级目录创建.env文件，包含TAG_NFC，PORTS_NFC，REPLICAS_NFC变量
+    image: harbor.catfoodworks.com/library/nfc:${TAG_NFC}
+    platform: linux/amd64
+    env_file:
+      # 文件包含变量同项目源码根目录的.env文件，覆盖其中的值
+      - ./service.env 
+    ports:
+      # replicas大于 1 时，例如replicated=3时PORTS_NFC=3000-3002
+      - "${PORTS_NFC}:3000"
+    deploy:
+      mode: replicated
+      replicas: ${REPLICAS_NFC}
+      restart_policy:
+        condition: on-failure
+    extra_hosts:
+      - host.docker.internal:host-gateway
